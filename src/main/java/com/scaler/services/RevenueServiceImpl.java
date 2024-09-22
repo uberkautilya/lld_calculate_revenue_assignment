@@ -10,10 +10,8 @@ import com.scaler.repositories.DailyRevenueRepository;
 import com.scaler.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.time.*;
+import java.util.*;
 
 @Service
 public class RevenueServiceImpl implements RevenueService {
@@ -37,32 +35,119 @@ public class RevenueServiceImpl implements RevenueService {
             throw new UserNotFoundException("User not found with userId: " + userId);
         }
 
-        AggregatedRevenue aggregatedRevenue = null;
+        AggregatedRevenue aggregatedRevenue = new AggregatedRevenue();
         List<DailyRevenue> revenues = new ArrayList<>();
         Date date = new Date();
-//        CURRENT_FY, PREVIOUS_FY, CURRENT_MONTH, PREVIOUS_MONTH;
 
         switch (queryType) {
             case "CURRENT_MONTH" -> {
-                revenues = revenueRepository.getDailyRevenueBetweenDates(date, date);
-                aggregateRevenues(aggregatedRevenue, revenues, date, date);
+                aggregateRevenues(aggregatedRevenue, currentMonth());
                 break;
             }
             case "PREVIOUS_MONTH" -> {
-
+                aggregateRevenues(aggregatedRevenue, previousMonth());
+                break;
             }
             case "CURRENT_FY" -> {
-
+                aggregateRevenues(aggregatedRevenue, currentFY());
+                break;
             }
             case "PREVIOUS_FY" -> {
-
+                aggregateRevenues(aggregatedRevenue, previousFY());
+                break;
             }
         }
         return aggregatedRevenue;
     }
 
-    private AggregatedRevenue aggregateRevenues(AggregatedRevenue aggregatedRevenue, List<DailyRevenue> revenues, Date fromDate, Date toDate) {
-        aggregatedRevenue = new AggregatedRevenue();
+    private Map<String, Date> previousFY() {
+        Map<String, Date> queryDates = new HashMap<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        int startYear = now.getYear();
+        int endYear = now.getYear();
+        Month startMonth = now.getMonth();
+        Month endMonth = Month.MARCH;
+
+        if (startMonth == Month.JANUARY || startMonth == Month.FEBRUARY || startMonth == Month.MARCH) {
+            startYear = startYear - 1;
+        } else {
+            endYear = startYear + 1;
+        }
+        startMonth = Month.APRIL;
+        startYear = startYear - 1;
+        endYear = endYear - 1;
+        boolean isEndYearLY = Year.isLeap(endYear);
+
+        LocalDateTime start = LocalDateTime.of(startYear, startMonth.getValue(), 1, 0, 0, 0);
+        LocalDateTime to = LocalDateTime.of(endYear, endMonth, Month.MARCH.length(isEndYearLY), 23, 59, 59);
+        queryDates.put("FROM", Date.from(start.toInstant(ZoneOffset.of("IST"))));
+        queryDates.put("TO", Date.from(to.toInstant(ZoneOffset.of("IST"))));
+        return queryDates;
+    }
+
+    private Map<String, Date> currentFY() {
+        Map<String, Date> queryDates = new HashMap<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        int startYear = now.getYear();
+        int endYear = now.getYear();
+        Month startMonth = now.getMonth();
+        Month endMonth = Month.MARCH;
+
+        if (startMonth == Month.JANUARY || startMonth == Month.FEBRUARY || startMonth == Month.MARCH) {
+            startYear = startYear - 1;
+        } else {
+            endYear = startYear + 1;
+        }
+        startMonth = Month.APRIL;
+        boolean isEndYearLY = Year.isLeap(endYear);
+
+        LocalDateTime start = LocalDateTime.of(startYear, startMonth.getValue(), 1, 0, 0, 0);
+        LocalDateTime to = LocalDateTime.of(endYear, endMonth, Month.MARCH.length(isEndYearLY), 23, 59, 59);
+        queryDates.put("FROM", Date.from(start.toInstant(ZoneOffset.of("IST"))));
+        queryDates.put("TO", Date.from(to.toInstant(ZoneOffset.of("IST"))));
+        return queryDates;
+    }
+
+    private Map<String, Date> previousMonth() {
+        Map<String, Date> queryDates = new HashMap<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        LocalDateTime prev = now.minusMonths(1L);
+        int prevYear = prev.getYear();
+        Month prevMonth = prev.getMonth();
+        boolean isPrevLeapYear = Year.isLeap(prevYear);
+        int daysInPrevMonth = prevMonth.length(isPrevLeapYear);
+
+        LocalDateTime start = LocalDateTime.of(prevYear, prevMonth.getValue(), 1, 0, 0, 0);
+        LocalDateTime to = LocalDateTime.of(prevYear, prevMonth.getValue(), daysInPrevMonth, 23, 59, 59);
+        queryDates.put("FROM", Date.from(start.toInstant(ZoneOffset.of("IST"))));
+        queryDates.put("TO", Date.from(to.toInstant(ZoneOffset.of("IST"))));
+        return queryDates;
+    }
+
+    private Map<String, Date> currentMonth() {
+        Map<String, Date> queryDates = new HashMap<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        int year = now.getYear();
+        Month currentMonth = now.getMonth();
+        boolean isLeapYear = Year.isLeap(year);
+        int daysInThisMonth = currentMonth.length(isLeapYear);
+
+        LocalDateTime start = LocalDateTime.of(year, currentMonth.getValue(), 1, 0, 0, 0);
+        LocalDateTime to = LocalDateTime.of(year, currentMonth.getValue(), daysInThisMonth, 23, 59, 59);
+        queryDates.put("FROM", Date.from(start.toInstant(ZoneOffset.of("IST"))));
+        queryDates.put("TO", Date.from(to.toInstant(ZoneOffset.of("IST"))));
+        return queryDates;
+    }
+
+    private AggregatedRevenue aggregateRevenues(AggregatedRevenue aggregatedRevenue, Map<String, Date> dateMap) {
+        Date fromDate = dateMap.get("FROM");
+        Date toDate = dateMap.get("TO");
+        List<DailyRevenue> revenues = revenueRepository.getDailyRevenueBetweenDates(fromDate, toDate);
+
         aggregatedRevenue.setFromDate(fromDate);
         aggregatedRevenue.setToDate(toDate);
         aggregatedRevenue.setRevenueFromFoodSales(revenues.stream()

@@ -7,6 +7,7 @@ import com.scaler.exceptions.UnAuthorizedAccess;
 import com.scaler.exceptions.UserNotFoundException;
 import com.scaler.models.AggregatedRevenue;
 import com.scaler.services.RevenueService;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -18,6 +19,7 @@ public class RevenueController {
         this.revenueService = revenueService;
     }
 
+    @PostMapping("/")
     public CalculateRevenueResponseDto calculateRevenue(CalculateRevenueRequestDto requestDto) {
         try {
             AggregatedRevenue aggrRevenue = revenueService.calculateRevenue(requestDto.getUserId(), requestDto.getRevenueQueryType());
