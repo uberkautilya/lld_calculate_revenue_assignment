@@ -1,5 +1,8 @@
 package com.scaler.models;
 
+import jakarta.persistence.Entity;
+
+@Entity
 public class User extends BaseModel{
     private String name;
     private String password;

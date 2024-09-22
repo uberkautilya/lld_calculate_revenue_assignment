@@ -1,7 +1,12 @@
 package com.scaler.models;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+
 import java.util.Date;
 
+@Entity
+@Table(name = "daily_revenue")
 public class DailyRevenue extends BaseModel{
     private double revenueFromFoodSales;
     private Date date;
