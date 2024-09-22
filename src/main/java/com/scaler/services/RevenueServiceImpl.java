@@ -25,15 +25,7 @@ public class RevenueServiceImpl implements RevenueService {
 
     @Override
     public AggregatedRevenue calculateRevenue(long userId, String queryType) throws UnAuthorizedAccess, UserNotFoundException {
-        Optional<User> userOptional = userRepository.findById(userId);
-        if (userOptional.isPresent()) {
-            UserType userType = userOptional.get().getUserType();
-            if (!UserType.BILLING.equals(userType)) {
-                throw new UnAuthorizedAccess("User doesn't have previleges to access this feature");
-            }
-        } else {
-            throw new UserNotFoundException("User not found with userId: " + userId);
-        }
+        validateUserPrivilege(userId);
 
         AggregatedRevenue aggregatedRevenue = new AggregatedRevenue();
         List<DailyRevenue> revenues = new ArrayList<>();
@@ -58,6 +50,18 @@ public class RevenueServiceImpl implements RevenueService {
             }
         }
         return aggregatedRevenue;
+    }
+
+    private void validateUserPrivilege(long userId) throws UnAuthorizedAccess, UserNotFoundException {
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isPresent()) {
+            UserType userType = userOptional.get().getUserType();
+            if (!UserType.BILLING.equals(userType)) {
+                throw new UnAuthorizedAccess("User doesn't have previleges to access this feature");
+            }
+        } else {
+            throw new UserNotFoundException("User not found with userId: " + userId);
+        }
     }
 
     private Map<String, Date> previousFY() {
