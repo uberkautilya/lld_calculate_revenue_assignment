@@ -7,5 +7,3 @@ import com.scaler.models.AggregatedRevenue;
 public interface RevenueService {
     public AggregatedRevenue calculateRevenue(long userId, String queryType) throws UnAuthorizedAccess, UserNotFoundException;
 }
-
-//Additional text added
